@@ -59,8 +59,16 @@ export const sendOccurrenceEmail = async (occurrenceData, pdfBase64) => {
 
   // 2. Fallback: Envio direto via API pública Web3Forms (garante entrega real sem precisar de servidor rodando)
   try {
+    // Chave da API Web3Forms vem de variável de ambiente (nunca hardcoded)
+    const web3formsKey = import.meta.env.VITE_WEB3FORMS_KEY;
+
+    if (!web3formsKey) {
+      console.error('Chave Web3Forms não configurada. Defina VITE_WEB3FORMS_KEY no arquivo .env');
+      throw new Error('Web3Forms key missing');
+    }
+
     const web3FormData = new FormData();
-    web3FormData.append('access_key', '89e47268-2943-4c91-9134-c2c61e404b86'); // Chave pública de envio direto
+    web3FormData.append('access_key', web3formsKey);
     web3FormData.append('subject', `🚨 [Ocorrência Escolar PEI] ${grade} - ${studentName}`);
     web3FormData.append('from_name', `Prof. ${teacherName} - E.E. Coronel Ary Gomes`);
     web3FormData.append('email', coordinationEmail);

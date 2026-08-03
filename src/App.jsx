@@ -1,18 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import Header from './components/Header';
 import OccurrenceForm from './components/OccurrenceForm';
 import PdfPreviewModal from './components/PdfPreviewModal';
 import Toast from './components/Toast';
-import { generateOccurrencePDF } from './utils/pdfGenerator';
-import { sendOccurrenceEmail } from './utils/emailService';
 import { ShieldCheck, FileCheck } from 'lucide-react';
+
+// Lazy imports para reduzir bundle inicial (~400KB economizados)
+const loadPdfGenerator = () => import('./utils/pdfGenerator').then(m => m.generateOccurrencePDF);
+const loadEmailService = () => import('./utils/emailService').then(m => m.sendOccurrenceEmail);
 
 export default function App() {
   const [theme, setTheme] = useState('dark');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
   
   // PDF Preview State
   const [previewPdfData, setPreviewPdfData] = useState(null);
@@ -52,9 +55,25 @@ export default function App() {
   };
 
   const showToast = (message, type = 'success') => {
+    // Limpa timer anterior para evitar memory leak
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
     setToast({ message, type });
-    setTimeout(() => setToast(null), 5000);
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, 5000);
   };
+
+  // Cleanup do timer ao desmontar componente
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   const validateForm = () => {
     if (!formData.teacherName.trim()) {
@@ -69,8 +88,9 @@ export default function App() {
       showToast('Por favor, selecione a série/turma do aluno.', 'error');
       return false;
     }
-    if (!formData.coordinationEmail || !formData.coordinationEmail.includes('@')) {
-      showToast('Por favor, informe um e-mail válido para a coordenação.', 'error');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.coordinationEmail || !emailRegex.test(formData.coordinationEmail)) {
+      showToast('Por favor, informe um e-mail válido para a coordenação (ex: nome@dominio.com).', 'error');
       return false;
     }
     if (!formData.occurrenceType) {
@@ -85,11 +105,12 @@ export default function App() {
   };
 
   // 1. Pré-visualizar PDF
-  const handlePreviewPdf = () => {
+  const handlePreviewPdf = async () => {
     if (!validateForm()) return;
 
     try {
       setIsGenerating(true);
+      const generateOccurrencePDF = await loadPdfGenerator();
       const pdf = generateOccurrencePDF(formData);
       setPreviewPdfData(pdf);
       setIsPreviewOpen(true);
@@ -102,11 +123,12 @@ export default function App() {
   };
 
   // 2. Baixar PDF Oficial
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (!validateForm()) return;
 
     try {
       setIsGenerating(true);
+      const generateOccurrencePDF = await loadPdfGenerator();
       const pdf = generateOccurrencePDF(formData);
       pdf.download();
 
@@ -140,6 +162,12 @@ export default function App() {
     try {
       setIsSendingEmail(true);
       showToast('Processando envio por e-mail e download do PDF...', 'info');
+
+      // Carrega módulos sob demanda
+      const [generateOccurrencePDF, sendOccurrenceEmail] = await Promise.all([
+        loadPdfGenerator(),
+        loadEmailService()
+      ]);
 
       // Gera a versão PDF oficial
       const pdf = generateOccurrencePDF(formData);

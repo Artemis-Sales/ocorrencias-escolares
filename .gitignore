@@ -4,3 +4,13 @@ dist
 .env.local
 .DS_Store
 *.log
+
+# Arquivos de exemplo e originais não usados em produção
+exemplo.docx
+exemplo.pdf
+Logo Ary.jpg
+Logo Sp.jpg
+Logo_Ary_Cropped.jpg
+Logo_Sp_Cropped.jpg
+scratch/
+word/

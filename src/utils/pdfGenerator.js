@@ -137,9 +137,9 @@ export const generateOccurrencePDF = (data) => {
   y += 4;
 
   const descBoxHeight = 105;
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(203, 213, 225); // Slate 300
-  doc.roundedRect(margin, y, contentWidth, descBoxHeight, 2, 2, 'FD');
+  const lineSpacing = 5;
+  const boxPadding = 4;
+  const pageHeight = doc.internal.pageSize.getHeight();
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -148,15 +148,63 @@ export const generateOccurrencePDF = (data) => {
   // Divide o texto em linhas ajustadas à largura da caixa
   const lines = doc.splitTextToSize(description || 'Nenhuma descrição detalhada informada.', contentWidth - 8);
   
-  let lineY = y + 7;
-  lines.forEach((line) => {
-    if (lineY < y + descBoxHeight - 6) {
-      doc.text(line, margin + 4, lineY);
-      lineY += 5;
-    }
-  });
+  // Calcula se o texto cabe na caixa de descrição padrão
+  const maxLinesPerBox = Math.floor((descBoxHeight - 13) / lineSpacing);
+  const needsOverflow = lines.length > maxLinesPerBox;
 
-  y += descBoxHeight + 16;
+  // Desenha a caixa de descrição (primeira página)
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(203, 213, 225); // Slate 300
+  doc.roundedRect(margin, y, contentWidth, descBoxHeight, 2, 2, 'FD');
+
+  let lineY = y + 7;
+  let lineIndex = 0;
+
+  // Renderiza linhas que cabem na primeira caixa
+  while (lineIndex < lines.length && lineY < y + descBoxHeight - 6) {
+    doc.text(lines[lineIndex], margin + boxPadding, lineY);
+    lineY += lineSpacing;
+    lineIndex++;
+  }
+
+  y += descBoxHeight;
+
+  // Se há mais linhas, continua em novas páginas
+  if (lineIndex < lines.length) {
+    while (lineIndex < lines.length) {
+      doc.addPage();
+      y = 16;
+
+      // Cabeçalho de continuação na nova página
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text('DESCRIÇÃO DETALHADA DOS FATOS (Continuação)', margin, y);
+      y += 5;
+
+      // Caixa de continuação (usa quase toda a página)
+      const contBoxHeight = pageHeight - y - 30;
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(203, 213, 225);
+      doc.roundedRect(margin, y, contentWidth, contBoxHeight, 2, 2, 'FD');
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+
+      lineY = y + 7;
+      while (lineIndex < lines.length && lineY < y + contBoxHeight - 6) {
+        doc.text(lines[lineIndex], margin + boxPadding, lineY);
+        lineY += lineSpacing;
+        lineIndex++;
+      }
+
+      y += contBoxHeight;
+    }
+  }
+
+  y += 16;
+
 
   // --- 5. CAMPO DE ASSINATURAS ---
   const sigWidth = 72;

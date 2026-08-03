@@ -1,7 +1,7 @@
 import React from 'react';
-import { X, Download, FileText } from 'lucide-react';
+import { X, Download, FileText, Send } from 'lucide-react';
 
-export default function PdfPreviewModal({ isOpen, onClose, pdfData, onDownload }) {
+export default function PdfPreviewModal({ isOpen, onClose, pdfData, onDownload, onSendEmail, isSendingEmail }) {
   if (!isOpen || !pdfData) return null;
 
   return (
@@ -40,16 +40,31 @@ export default function PdfPreviewModal({ isOpen, onClose, pdfData, onDownload }
             Fechar
           </button>
 
-          <button
-            onClick={() => {
-              onDownload();
-              onClose();
-            }}
-            className="btn btn-primary"
-          >
-            <Download size={18} />
-            Baixar PDF Formatado
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => {
+                onSendEmail();
+                onClose();
+              }}
+              disabled={isSendingEmail}
+              className="btn btn-secondary"
+              style={{ borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}
+            >
+              <Send size={18} color="#34d399" />
+              {isSendingEmail ? 'Enviando...' : 'Enviar p/ Coordenação'}
+            </button>
+
+            <button
+              onClick={() => {
+                onDownload();
+                onClose();
+              }}
+              className="btn btn-primary"
+            >
+              <Download size={18} />
+              Baixar PDF Formatado
+            </button>
+          </div>
         </div>
 
       </div>

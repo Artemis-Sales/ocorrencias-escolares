@@ -27,13 +27,23 @@ export const sendOccurrenceEmail = async (occurrenceData, pdfBase64) => {
     pdfBase64
   };
 
-  // 1. Tenta envio via API do Servidor Local (/api/send-email)
+  // 1. Tenta envio via API do Servidor Local ou Serverless (/api/send-email)
   try {
-    const response = await fetch('http://localhost:3001/api/send-email', {
+    const apiEndpoint = window.location.hostname === 'localhost' 
+      ? 'http://localhost:3001/api/send-email' 
+      : '/api/send-email';
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (response.ok) {
       const data = await response.json();
@@ -44,7 +54,7 @@ export const sendOccurrenceEmail = async (occurrenceData, pdfBase64) => {
       };
     }
   } catch (err) {
-    console.warn('Servidor local de e-mail (porta 3001) inativo. Tentando envio via API pública de e-mail...', err);
+    console.warn('Servidor primário de e-mail inativo ou não respondeu a tempo. Usando envio direto por API...', err.message);
   }
 
   // 2. Fallback: Envio direto via API pública Web3Forms (garante entrega real sem precisar de servidor rodando)

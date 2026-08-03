@@ -5,11 +5,13 @@ import OccurrenceForm from './components/OccurrenceForm';
 import PdfPreviewModal from './components/PdfPreviewModal';
 import Toast from './components/Toast';
 import { generateOccurrencePDF } from './utils/pdfGenerator';
+import { sendOccurrenceEmail } from './utils/emailService';
 import { ShieldCheck, FileCheck } from 'lucide-react';
 
 export default function App() {
   const [theme, setTheme] = useState('dark');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [toast, setToast] = useState(null);
   
   // PDF Preview State
@@ -24,7 +26,7 @@ export default function App() {
     occurrenceType: '',
     dateTime: '',
     description: '',
-    coordinationEmail: 'Coordenação Pedagógica PEI'
+    coordinationEmail: 'visovalu@gmail.com'
   });
 
   // Inicializar data/hora atual no formato PT-BR
@@ -65,6 +67,10 @@ export default function App() {
     }
     if (!formData.grade) {
       showToast('Por favor, selecione a série/turma do aluno.', 'error');
+      return false;
+    }
+    if (!formData.coordinationEmail || !formData.coordinationEmail.includes('@')) {
+      showToast('Por favor, informe um e-mail válido para a coordenação.', 'error');
       return false;
     }
     if (!formData.occurrenceType) {
@@ -127,6 +133,43 @@ export default function App() {
     }
   };
 
+  // 3. Enviar Ocorrência por E-mail
+  const handleSendEmail = async () => {
+    if (!validateForm()) return;
+
+    try {
+      setIsSendingEmail(true);
+      showToast('Enviando ocorrência para o e-mail da coordenação...', 'info');
+
+      // Gera a versão PDF em base64 para anexo
+      const pdf = generateOccurrencePDF(formData);
+      const result = await sendOccurrenceEmail(formData, pdf.base64);
+
+      if (result.success) {
+        confetti({
+          particleCount: 90,
+          spread: 75,
+          origin: { y: 0.6 }
+        });
+        showToast(result.message, 'success');
+
+        // Limpa formulário após envio bem sucedido
+        setFormData(prev => ({
+          ...prev,
+          studentName: '',
+          description: ''
+        }));
+      } else {
+        showToast(result.message || 'Erro ao enviar e-mail da ocorrência.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Ocorreu uma falha ao enviar a ocorrência por e-mail.', 'error');
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '60px' }}>
       {/* Cabeçalho */}
@@ -142,7 +185,7 @@ export default function App() {
             <div>
               <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Gerador de Ocorrência Escolar PEI</span>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Geração instantânea de documento PDF oficial pronto para compartilhamento e impressão.
+                Geração instantânea de documento PDF oficial e envio para a coordenação por e-mail.
               </p>
             </div>
           </div>
@@ -157,7 +200,9 @@ export default function App() {
           onChange={handleInputChange}
           onPreview={handlePreviewPdf}
           onDownload={handleDownloadPdf}
+          onSendEmail={handleSendEmail}
           isGenerating={isGenerating}
+          isSendingEmail={isSendingEmail}
         />
       </main>
 
@@ -167,6 +212,8 @@ export default function App() {
         onClose={() => setIsPreviewOpen(false)}
         pdfData={previewPdfData}
         onDownload={handleDownloadPdf}
+        onSendEmail={handleSendEmail}
+        isSendingEmail={isSendingEmail}
       />
 
       {/* Toast Feedback Notification */}

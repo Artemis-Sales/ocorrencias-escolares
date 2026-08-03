@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { UserCheck, Users, Calendar, AlertTriangle, FileText, Eye, Download, PlusCircle, Sparkles, CheckCircle } from 'lucide-react';
+import { UserCheck, Users, Calendar, AlertTriangle, FileText, Eye, Download, PlusCircle, Sparkles, Mail, Send } from 'lucide-react';
 
 export default function OccurrenceForm({
   formData,
   onChange,
   onPreview,
   onDownload,
-  isGenerating
+  onSendEmail,
+  isGenerating,
+  isSendingEmail
 }) {
   const [activeChip, setActiveChip] = useState('');
 
@@ -49,7 +51,7 @@ export default function OccurrenceForm({
           <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Novo Registro de Ocorrência Escolar</h2>
         </div>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          Preencha os campos abaixo para gerar o PDF oficial pronto para cópia, arquivo ou entrega à coordenação.
+          Preencha os campos abaixo para gerar o PDF oficial e enviar o registro diretamente para a coordenação.
         </p>
       </div>
 
@@ -148,29 +150,52 @@ export default function OccurrenceForm({
 
       </div>
 
-      {/* Campo: Categoria da Ocorrência */}
-      <div className="form-group" style={{ marginBottom: '24px' }}>
-        <label className="form-label" htmlFor="occurrenceType">
-          <AlertTriangle size={18} color="#f59e0b" />
-          Tipo / Categoria da Infração <span style={{ color: '#ef4444' }}>*</span>
-        </label>
-        <select
-          id="occurrenceType"
-          name="occurrenceType"
-          required
-          className="form-select"
-          value={formData.occurrenceType}
-          onChange={onChange}
-        >
-          <option value="">Selecione o tipo da infração...</option>
-          <option value="Indisciplina / Perturbação da Aula">Indisciplina / Perturbação da Aula</option>
-          <option value="Uso Indevido de Aparelho Celular / Eletrônicos">Uso Indevido de Aparelho Celular / Eletrônicos</option>
-          <option value="Desrespeito às Regras da Escola ou Funcionários">Desrespeito às Regras da Escola ou Funcionários</option>
-          <option value="Faltas ou Atrasos Recorrentes">Faltas ou Atrasos Recorrentes</option>
-          <option value="Agressão Verbal ou Desentendimento entre Alunos">Agressão Verbal ou Desentendimento entre Alunos</option>
-          <option value="Danos ao Patrimônio Escolar">Danos ao Patrimônio Escolar</option>
-          <option value="Outro Motivo Disciplinar">Outro Motivo Disciplinar</option>
-        </select>
+      {/* Campo: E-mail da Coordenação e Categoria */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+        
+        {/* Campo: Categoria da Ocorrência */}
+        <div className="form-group">
+          <label className="form-label" htmlFor="occurrenceType">
+            <AlertTriangle size={18} color="#f59e0b" />
+            Tipo / Categoria da Infração <span style={{ color: '#ef4444' }}>*</span>
+          </label>
+          <select
+            id="occurrenceType"
+            name="occurrenceType"
+            required
+            className="form-select"
+            value={formData.occurrenceType}
+            onChange={onChange}
+          >
+            <option value="">Selecione o tipo da infração...</option>
+            <option value="Indisciplina / Perturbação da Aula">Indisciplina / Perturbação da Aula</option>
+            <option value="Uso Indevido de Aparelho Celular / Eletrônicos">Uso Indevido de Aparelho Celular / Eletrônicos</option>
+            <option value="Desrespeito às Regras da Escola ou Funcionários">Desrespeito às Regras da Escola ou Funcionários</option>
+            <option value="Faltas ou Atrasos Recorrentes">Faltas ou Atrasos Recorrentes</option>
+            <option value="Agressão Verbal ou Desentendimento entre Alunos">Agressão Verbal ou Desentendimento entre Alunos</option>
+            <option value="Danos ao Patrimônio Escolar">Danos ao Patrimônio Escolar</option>
+            <option value="Outro Motivo Disciplinar">Outro Motivo Disciplinar</option>
+          </select>
+        </div>
+
+        {/* Campo: E-mail Destinatário da Coordenação */}
+        <div className="form-group">
+          <label className="form-label" htmlFor="coordinationEmail">
+            <Mail size={18} color="#10b981" />
+            E-mail da Coordenação / Destino <span style={{ color: '#ef4444' }}>*</span>
+          </label>
+          <input
+            id="coordinationEmail"
+            name="coordinationEmail"
+            type="email"
+            required
+            className="form-input"
+            placeholder="Ex: visovalu@gmail.com ou coordenacao@escola.sp.gov.br"
+            value={formData.coordinationEmail}
+            onChange={onChange}
+          />
+        </div>
+
       </div>
 
       {/* Campo: Descrição Detalhada */}
@@ -231,27 +256,38 @@ export default function OccurrenceForm({
       </div>
 
       {/* Botões de Ação Principais */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
         
         <button
           type="button"
           onClick={onPreview}
-          disabled={isGenerating}
+          disabled={isGenerating || isSendingEmail}
           className="btn btn-secondary"
-          style={{ padding: '14px 24px' }}
+          style={{ padding: '14px 20px' }}
         >
           <Eye size={18} color="#818cf8" />
           Visualizar PDF
         </button>
 
         <button
+          type="button"
+          onClick={onSendEmail}
+          disabled={isGenerating || isSendingEmail}
+          className="btn btn-secondary"
+          style={{ padding: '14px 20px', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}
+        >
+          <Send size={18} color="#34d399" />
+          {isSendingEmail ? 'Enviando...' : 'Enviar p/ Coordenação'}
+        </button>
+
+        <button
           type="submit"
-          disabled={isGenerating}
+          disabled={isGenerating || isSendingEmail}
           className="btn btn-primary"
-          style={{ padding: '14px 28px', fontSize: '1rem' }}
+          style={{ padding: '14px 24px', fontSize: '1rem' }}
         >
           <Download size={18} />
-          {isGenerating ? 'Gerando PDF...' : 'Gerar e Baixar Ocorrência em PDF'}
+          {isGenerating ? 'Gerando PDF...' : 'Gerar e Baixar PDF'}
         </button>
 
       </div>

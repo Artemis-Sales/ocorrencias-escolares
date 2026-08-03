@@ -1,5 +1,7 @@
 import React from 'react';
-import { Shield, Moon, Sun, BookOpen, GraduationCap } from 'lucide-react';
+import { Shield, Moon, Sun, BookOpen } from 'lucide-react';
+import logoAry from '../assets/logo-ary.jpg';
+import logoSp from '../assets/logo-sp.jpg';
 
 export default function Header({ theme, toggleTheme }) {
   return (
@@ -8,18 +10,8 @@ export default function Header({ theme, toggleTheme }) {
         
         {/* Logos & Escolas */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{
-            width: '46px',
-            height: '46px',
-            borderRadius: '14px',
-            background: 'linear-gradient(135deg, #4f46e5, #3730a3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(79, 70, 229, 0.4)'
-          }}>
-            <GraduationCap size={26} color="#ffffff" />
-          </div>
+          <img src={logoSp} alt="Logo SP" style={{ height: '32px', objectFit: 'contain', background: '#ffffff', padding: '2px 6px', borderRadius: '6px' }} />
+          <img src={logoAry} alt="Logo Ary Gomes" style={{ height: '42px', objectFit: 'contain', background: '#ffffff', padding: '2px', borderRadius: '6px' }} />
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

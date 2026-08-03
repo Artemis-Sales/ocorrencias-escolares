@@ -1,8 +1,10 @@
 import jsPDF from 'jspdf';
+import { LOGO_SP_BASE64, LOGO_ARY_BASE64 } from '../assets/logos.js';
 
 /**
  * Gera um documento PDF oficial de Ocorrência Escolar para a E.E. Coronel Ary Gomes
  * Layout moderno, sem sobreposição de texto e com alta legibilidade.
+ * Baseado no modelo oficial exemplo.docx / exemplo.pdf
  * @param {Object} data - Dados da ocorrência
  * @returns {Object} { doc, blob, base64, filename, download }
  */
@@ -17,7 +19,8 @@ export const generateOccurrencePDF = (data) => {
     coordinationEmail = ''
   } = data;
 
-  const doc = new jsPDF({
+  const JsPDFClass = jsPDF.jsPDF || jsPDF;
+  const doc = new JsPDFClass({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4'
@@ -26,9 +29,9 @@ export const generateOccurrencePDF = (data) => {
   const pageWidth = doc.internal.pageSize.getWidth(); // 210mm
   const margin = 16;
   const contentWidth = pageWidth - (margin * 2); // 178mm
-  let y = 14;
+  let y = 12;
 
-  // --- 1. CABEÇALHO OFICIAL DO GOVERNO SP & ESCOLA ---
+  // --- 1. CABEÇALHO OFICIAL DO GOVERNO SP & ESCOLA (BASEADO NO EXEMPLO.DOCX) ---
   
   // Borda decorativa superior (Linha em Azul Marinho do Estado)
   doc.setDrawColor(30, 58, 138); // #1e3a8a
@@ -36,39 +39,34 @@ export const generateOccurrencePDF = (data) => {
   doc.line(margin, y, pageWidth - margin, y);
   y += 5;
 
-  // Brasão Simbólico SP (Esquerda)
-  doc.setFillColor(220, 38, 38); // Vermelho SP
-  doc.rect(margin, y, 10, 8, 'F');
-  doc.setFillColor(15, 23, 42); // Preto SP
-  doc.rect(margin + 3, y + 3, 10, 8, 'F');
+  // Logo SP (Esquerda) - Proporção ~4.05:1 (142x35)
+  const spLogoWidth = 33;
+  const spLogoHeight = 33 / 4.05; // ~8.15mm
+  doc.addImage(LOGO_SP_BASE64, 'JPEG', margin, y + 2, spLogoWidth, spLogoHeight);
 
-  // Logo da Escola Ary Gomes PEI (Direita - Círculo Amarelo PEI)
-  const rightLogoX = pageWidth - margin - 12;
-  doc.setFillColor(245, 158, 11); // Amarelo Dourado PEI
-  doc.circle(rightLogoX + 6, y + 6, 6, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.text('PEI', rightLogoX + 3.8, y + 8);
+  // Logo Ary Gomes PEI (Direita) - Proporção 1:1 (105x105)
+  const aryLogoSize = 16;
+  const aryLogoX = pageWidth - margin - aryLogoSize;
+  doc.addImage(LOGO_ARY_BASE64, 'JPEG', aryLogoX, y, aryLogoSize, aryLogoSize);
 
-  // Textos Institucionais do Cabeçalho
+  // Textos Institucionais do Cabeçalho (Centralizado)
   doc.setTextColor(15, 23, 42);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('GOVERNO DO ESTADO DE SÃO PAULO', pageWidth / 2, y + 3, { align: 'center' });
+  doc.setFontSize(9.5);
+  doc.text('GOVERNO DO ESTADO DE SÃO PAULO', pageWidth / 2, y + 3.5, { align: 'center' });
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(71, 85, 105);
-  doc.text('SECRETARIA DE ESTADO DA EDUCAÇÃO', pageWidth / 2, y + 7, { align: 'center' });
-  doc.text('DIRETORIA DE ENSINO – REGIÃO DE GUARULHOS SUL', pageWidth / 2, y + 10.5, { align: 'center' });
+  doc.setFontSize(8.5);
+  doc.setTextColor(51, 65, 85);
+  doc.text('SECRETARIA DE ESTADO DA EDUCAÇÃO', pageWidth / 2, y + 7.5, { align: 'center' });
+  doc.text('DIRETORIA DE ENSINO – REGIÃO DE GUARULHOS SUL', pageWidth / 2, y + 11, { align: 'center' });
   
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 58, 138);
-  doc.setFontSize(9.5);
-  doc.text('E.E. CORONEL ARY GOMES', pageWidth / 2, y + 15, { align: 'center' });
+  doc.setTextColor(30, 58, 138); // Azul Marinho Oficial
+  doc.setFontSize(10);
+  doc.text('E.E. CORONEL ARY GOMES', pageWidth / 2, y + 15.5, { align: 'center' });
 
-  y += 20;
+  y += 21;
 
   // Linha sutil divisória
   doc.setDrawColor(226, 232, 240);

@@ -13,7 +13,7 @@ export const sendOccurrenceEmail = async (occurrenceData, pdfBase64) => {
     occurrenceType,
     dateTime,
     description,
-    coordinationEmail = 'visovalu@gmail.com'
+    coordinationEmail = 'arygomescoord2026@gmail.com'
   } = occurrenceData;
 
   const payload = {

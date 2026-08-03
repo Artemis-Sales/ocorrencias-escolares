@@ -26,7 +26,7 @@ export default function App() {
     occurrenceType: '',
     dateTime: '',
     description: '',
-    coordinationEmail: 'visovalu@gmail.com'
+    coordinationEmail: 'arygomescoord2026@gmail.com'
   });
 
   // Inicializar data/hora atual no formato PT-BR
@@ -133,16 +133,21 @@ export default function App() {
     }
   };
 
-  // 3. Enviar Ocorrência por E-mail
+  // 3. Enviar Ocorrência por E-mail E Baixar PDF Simultaneamente
   const handleSendEmail = async () => {
     if (!validateForm()) return;
 
     try {
       setIsSendingEmail(true);
-      showToast('Enviando ocorrência para o e-mail da coordenação...', 'info');
+      showToast('Processando envio por e-mail e download do PDF...', 'info');
 
-      // Gera a versão PDF em base64 para anexo
+      // Gera a versão PDF oficial
       const pdf = generateOccurrencePDF(formData);
+
+      // Baixa o arquivo PDF localmente no computador do usuário
+      pdf.download();
+
+      // Envia o e-mail com anexo para a coordenação
       const result = await sendOccurrenceEmail(formData, pdf.base64);
 
       if (result.success) {
@@ -151,7 +156,7 @@ export default function App() {
           spread: 75,
           origin: { y: 0.6 }
         });
-        showToast(result.message, 'success');
+        showToast(`Ocorrência em PDF baixada e enviada com sucesso para ${formData.coordinationEmail}!`, 'success');
 
         // Limpa formulário após envio bem sucedido
         setFormData(prev => ({
@@ -160,11 +165,11 @@ export default function App() {
           description: ''
         }));
       } else {
-        showToast(result.message || 'Erro ao enviar e-mail da ocorrência.', 'error');
+        showToast(result.message || 'Erro ao enviar e-mail da ocorrência, porém o PDF foi baixado com sucesso.', 'error');
       }
     } catch (err) {
       console.error(err);
-      showToast('Ocorreu uma falha ao enviar a ocorrência por e-mail.', 'error');
+      showToast('Ocorreu uma falha durante o processo de envio por e-mail.', 'error');
     } finally {
       setIsSendingEmail(false);
     }

@@ -190,7 +190,7 @@ export default function OccurrenceForm({
             type="email"
             required
             className="form-input"
-            placeholder="Ex: visovalu@gmail.com ou coordenacao@escola.sp.gov.br"
+            placeholder="Ex: arygomescoord2026@gmail.com ou coordenacao@escola.sp.gov.br"
             value={formData.coordinationEmail}
             onChange={onChange}
           />
@@ -277,7 +277,7 @@ export default function OccurrenceForm({
           style={{ padding: '14px 20px', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}
         >
           <Send size={18} color="#34d399" />
-          {isSendingEmail ? 'Enviando...' : 'Enviar p/ Coordenação'}
+          {isSendingEmail ? 'Enviando e Baixando...' : 'Enviar por E-mail e Baixar PDF'}
         </button>
 
         <button

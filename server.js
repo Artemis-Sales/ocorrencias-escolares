@@ -55,7 +55,7 @@ app.post('/api/send-email', async (req, res) => {
       occurrenceType,
       dateTime,
       description,
-      coordinationEmail = 'visovalu@gmail.com',
+      coordinationEmail = 'arygomescoord2026@gmail.com',
       pdfBase64
     } = req.body;
 

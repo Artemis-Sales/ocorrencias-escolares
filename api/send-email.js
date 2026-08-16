@@ -16,6 +16,7 @@ function sanitizeHeader(text, maxLen = 120) {
 }
 
 export default async function handler(req, res) {
+  // Cabeçalhos CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
@@ -28,11 +29,36 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  // Diagnóstico GET para verificar se a API está online na Vercel
+  if (req.method === 'GET') {
+    const hasSmtpPass = Boolean(process.env.SMTP_PASS);
+    const smtpUser = process.env.SMTP_USER || 'visovalu@gmail.com';
+    return res.status(200).json({
+      status: 'API Vercel Online',
+      smtpUser,
+      hasSmtpPass,
+      message: hasSmtpPass 
+        ? 'Configuração SMTP ativa na Vercel.' 
+        : 'ATENÇÃO: SMTP_PASS não configurada nas Environment Variables da Vercel.'
+    });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, message: 'Método não permitido. Use POST.' });
   }
 
   try {
+    // Garante compatibilidade caso o body venha como string ou objeto na Vercel
+    let body = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (e) {
+        return res.status(400).json({ success: false, message: 'Formato JSON inválido no corpo da requisição.' });
+      }
+    }
+    body = body || {};
+
     const {
       teacherName,
       studentName,
@@ -43,7 +69,7 @@ export default async function handler(req, res) {
       coordinationEmail = 'visovalu@gmail.com',
       teacherEmail = '',
       pdfBase64
-    } = req.body || {};
+    } = body;
 
     if (!teacherName || !studentName || !grade || !description) {
       return res.status(400).json({ 
@@ -79,61 +105,41 @@ export default async function handler(req, res) {
 
     let transporter;
     let senderEmail = process.env.SMTP_USER || 'visovalu@gmail.com';
-    let isTestAccount = false;
 
     const rawPass = process.env.SMTP_PASS || '';
     const cleanPass = rawPass.replace(/\s+/g, '');
 
-    if (cleanPass) {
-      const user = process.env.SMTP_USER || 'visovalu@gmail.com';
-      const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-      const isGmail = host.includes('gmail');
-
-      if (isGmail) {
-        transporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: user,
-            pass: cleanPass
-          }
-        });
-      } else {
-        transporter = nodemailer.createTransport({
-          host: host,
-          port: Number(process.env.SMTP_PORT) || 465,
-          secure: process.env.SMTP_SECURE !== 'false',
-          auth: {
-            user: user,
-            pass: cleanPass
-          }
-        });
-      }
-      senderEmail = user;
-    } else {
-      try {
-        const testAccount = await nodemailer.createTestAccount();
-        transporter = nodemailer.createTransport({
-          host: 'smtp.ethereal.email',
-          port: 587,
-          secure: false,
-          auth: {
-            user: testAccount.user,
-            pass: testAccount.pass
-          }
-        });
-        senderEmail = testAccount.user;
-        isTestAccount = true;
-      } catch (etherealErr) {
-        console.error('Erro ao gerar conta de teste Ethereal:', etherealErr);
-      }
-    }
-
-    if (!transporter) {
+    if (!cleanPass) {
       return res.status(500).json({
         success: false,
-        message: 'Servidor de envio de e-mail não configurado. Adicione SMTP_PASS no ambiente.'
+        message: 'Variável de ambiente SMTP_PASS não configurada no painel da Vercel. Adicione a senha de aplicativo nas configurações do projeto na Vercel.'
       });
     }
+
+    const user = process.env.SMTP_USER || 'visovalu@gmail.com';
+    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const isGmail = host.includes('gmail');
+
+    if (isGmail) {
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: user,
+          pass: cleanPass
+        }
+      });
+    } else {
+      transporter = nodemailer.createTransport({
+        host: host,
+        port: Number(process.env.SMTP_PORT) || 465,
+        secure: process.env.SMTP_SECURE !== 'false',
+        auth: {
+          user: user,
+          pass: cleanPass
+        }
+      });
+    }
+    senderEmail = user;
 
     const base64Data = pdfBase64 ? pdfBase64.replace(/^data:application\/pdf;base64,/, '') : null;
     const pdfBuffer = base64Data ? Buffer.from(base64Data, 'base64') : null;
@@ -212,20 +218,14 @@ export default async function handler(req, res) {
     const info = await transporter.sendMail(mailOptions);
     console.log(`✉️ E-mail enviado com sucesso para ${cleanCoordinationEmail}. ID: ${info.messageId}`);
 
-    let previewUrl = null;
-    if (isTestAccount) {
-      previewUrl = nodemailer.getTestMessageUrl(info);
-    }
-
     return res.status(200).json({
       success: true,
       message: `Ocorrência e documento PDF enviados com sucesso para a coordenação (${cleanCoordinationEmail})!`,
-      messageId: info.messageId,
-      previewUrl
+      messageId: info.messageId
     });
 
   } catch (error) {
-    console.error('Erro no envio de e-mail:', error);
+    console.error('Erro no envio de e-mail na Vercel:', error);
     return res.status(500).json({
       success: false,
       message: `Falha ao enviar e-mail: ${error.message || 'Erro interno no servidor de envio'}`

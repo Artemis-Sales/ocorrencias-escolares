@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { LOGO_SP_BASE64, LOGO_ARY_BASE64 } from '../assets/logos.js';
+import { LOGO_ARY_BASE64 } from '../assets/logos.js';
 
 /**
  * Gera um documento PDF oficial de Ocorrência Escolar para a E.E. Coronel Ary Gomes
@@ -38,11 +38,6 @@ export const generateOccurrencePDF = (data) => {
   doc.setLineWidth(1.2);
   doc.line(margin, y, pageWidth - margin, y);
   y += 5;
-
-  // Logo SP (Esquerda) - Proporção ~4.05:1 (142x35)
-  const spLogoWidth = 33;
-  const spLogoHeight = 33 / 4.05; // ~8.15mm
-  doc.addImage(LOGO_SP_BASE64, 'JPEG', margin, y + 2, spLogoWidth, spLogoHeight);
 
   // Logo Ary Gomes PEI (Direita) - Proporção 1:1 (105x105)
   const aryLogoSize = 16;

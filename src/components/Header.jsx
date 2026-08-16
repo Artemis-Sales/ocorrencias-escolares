@@ -1,7 +1,6 @@
 import React from 'react';
 import { Shield, Moon, Sun, BookOpen } from 'lucide-react';
 import logoAry from '../assets/logo-ary.jpg';
-import logoSp from '../assets/logo-sp.jpg';
 
 export default function Header({ theme, toggleTheme }) {
   return (
@@ -10,7 +9,6 @@ export default function Header({ theme, toggleTheme }) {
         
         {/* Logos & Escolas */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <img src={logoSp} alt="Logo SP" style={{ height: '32px', objectFit: 'contain', background: '#ffffff', padding: '2px 6px', borderRadius: '6px' }} />
           <img src={logoAry} alt="Logo Ary Gomes" style={{ height: '42px', objectFit: 'contain', background: '#ffffff', padding: '2px', borderRadius: '6px' }} />
 
           <div>

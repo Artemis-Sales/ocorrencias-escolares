@@ -4,9 +4,12 @@ import Header from './components/Header';
 import OccurrenceForm from './components/OccurrenceForm';
 import PdfPreviewModal from './components/PdfPreviewModal';
 import Toast from './components/Toast';
-import { ShieldCheck, FileCheck } from 'lucide-react';
+import { ShieldCheck, Mail } from 'lucide-react';
 
-// Lazy imports para reduzir bundle inicial (~400KB economizados)
+const DRAFT_STORAGE_KEY = 'ocorrencia_draft_v1';
+const TEACHER_STORAGE_KEY = 'ocorrencia_teacher_name';
+
+// Lazy imports para reduzir bundle inicial
 const loadPdfGenerator = () => import('./utils/pdfGenerator').then(m => m.generateOccurrencePDF);
 const loadEmailService = () => import('./utils/emailService').then(m => m.sendOccurrenceEmail);
 
@@ -14,34 +17,85 @@ export default function App() {
   const [theme, setTheme] = useState('dark');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isDraftSaved, setIsDraftSaved] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
+  const draftTimerRef = useRef(null);
   
   // PDF Preview State
   const [previewPdfData, setPreviewPdfData] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  // Form State
-  const [formData, setFormData] = useState({
-    teacherName: '',
-    studentName: '',
-    grade: '',
-    occurrenceType: '',
-    dateTime: '',
-    description: '',
-    coordinationEmail: 'arygomescoord2026@gmail.com'
+  // Form State com recuperação de rascunho
+  const [formData, setFormData] = useState(() => {
+    const savedTeacher = localStorage.getItem(TEACHER_STORAGE_KEY) || '';
+    const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+    
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        return {
+          teacherName: savedTeacher || parsed.teacherName || '',
+          studentName: parsed.studentName || '',
+          grade: parsed.grade || '',
+          occurrenceType: parsed.occurrenceType || '',
+          dateTime: parsed.dateTime || '',
+          description: parsed.description || '',
+          coordinationEmail: parsed.coordinationEmail || 'visovalu@gmail.com',
+          teacherEmail: parsed.teacherEmail || ''
+        };
+      } catch (e) {
+        // Fallback se json inválido
+      }
+    }
+
+    return {
+      teacherName: savedTeacher,
+      studentName: '',
+      grade: '',
+      occurrenceType: '',
+      dateTime: '',
+      description: '',
+      coordinationEmail: 'visovalu@gmail.com',
+      teacherEmail: ''
+    };
   });
 
-  // Inicializar data/hora atual no formato PT-BR
+  // Atualizar data/hora se não estiver preenchida no rascunho
   useEffect(() => {
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString('pt-BR');
-    const formattedTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    setFormData(prev => ({
-      ...prev,
-      dateTime: `${formattedDate} às ${formattedTime}`
-    }));
+    if (!formData.dateTime) {
+      const now = new Date();
+      const formattedDate = now.toLocaleDateString('pt-BR');
+      const formattedTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      setFormData(prev => ({
+        ...prev,
+        dateTime: `${formattedDate} às ${formattedTime}`
+      }));
+    }
   }, []);
+
+  // Auto-Save de Rascunho com debounce
+  useEffect(() => {
+    if (draftTimerRef.current) {
+      clearTimeout(draftTimerRef.current);
+    }
+
+    draftTimerRef.current = setTimeout(() => {
+      try {
+        if (formData.teacherName) {
+          localStorage.setItem(TEACHER_STORAGE_KEY, formData.teacherName);
+        }
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(formData));
+        setIsDraftSaved(true);
+      } catch (e) {
+        console.warn('Erro ao salvar rascunho:', e);
+      }
+    }, 600);
+
+    return () => {
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    };
+  }, [formData]);
 
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -54,8 +108,24 @@ export default function App() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleResetStudentFields = () => {
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString('pt-BR');
+    const formattedTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    setFormData(prev => ({
+      ...prev,
+      studentName: '',
+      grade: '',
+      occurrenceType: '',
+      description: '',
+      dateTime: `${formattedDate} às ${formattedTime}`
+    }));
+
+    showToast('Campos do aluno limpos. Nome do professor mantido.', 'info');
+  };
+
   const showToast = (message, type = 'success') => {
-    // Limpa timer anterior para evitar memory leak
     if (toastTimerRef.current) {
       clearTimeout(toastTimerRef.current);
     }
@@ -63,10 +133,9 @@ export default function App() {
     toastTimerRef.current = setTimeout(() => {
       setToast(null);
       toastTimerRef.current = null;
-    }, 5000);
+    }, 6000);
   };
 
-  // Cleanup do timer ao desmontar componente
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) {
@@ -90,7 +159,11 @@ export default function App() {
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.coordinationEmail || !emailRegex.test(formData.coordinationEmail)) {
-      showToast('Por favor, informe um e-mail válido para a coordenação (ex: nome@dominio.com).', 'error');
+      showToast('Por favor, informe um e-mail válido para a coordenação.', 'error');
+      return false;
+    }
+    if (formData.teacherEmail && !emailRegex.test(formData.teacherEmail)) {
+      showToast('O e-mail do professor informado para cópia não é válido.', 'error');
       return false;
     }
     if (!formData.occurrenceType) {
@@ -132,7 +205,6 @@ export default function App() {
       const pdf = generateOccurrencePDF(formData);
       pdf.download();
 
-      // Celebração visual de arquivo pronto
       confetti({
         particleCount: 80,
         spread: 70,
@@ -141,12 +213,8 @@ export default function App() {
 
       showToast('Ocorrência em PDF gerada e baixada com sucesso!');
 
-      // Limpa dados de entrada mantendo o nome do professor
-      setFormData(prev => ({
-        ...prev,
-        studentName: '',
-        description: ''
-      }));
+      // Limpa formulário do aluno mantendo dados do professor
+      handleResetStudentFields();
     } catch (err) {
       console.error(err);
       showToast('Falha ao baixar o documento PDF.', 'error');
@@ -161,43 +229,44 @@ export default function App() {
 
     try {
       setIsSendingEmail(true);
-      showToast('Processando envio por e-mail e download do PDF...', 'info');
+      showToast('Processando envio direto para o e-mail da coordenação...', 'info');
 
-      // Carrega módulos sob demanda
       const [generateOccurrencePDF, sendOccurrenceEmail] = await Promise.all([
         loadPdfGenerator(),
         loadEmailService()
       ]);
 
-      // Gera a versão PDF oficial
+      // 1. Gera PDF
       const pdf = generateOccurrencePDF(formData);
 
-      // Baixa o arquivo PDF localmente no computador do usuário
+      // 2. Baixa uma cópia no dispositivo
       pdf.download();
 
-      // Envia o e-mail com anexo para a coordenação
+      // 3. Dispara o e-mail com o anexo PDF
       const result = await sendOccurrenceEmail(formData, pdf.base64);
 
       if (result.success) {
         confetti({
-          particleCount: 90,
-          spread: 75,
+          particleCount: 100,
+          spread: 80,
           origin: { y: 0.6 }
         });
-        showToast(`Ocorrência em PDF baixada e enviada com sucesso para ${formData.coordinationEmail}!`, 'success');
 
-        // Limpa formulário após envio bem sucedido
-        setFormData(prev => ({
-          ...prev,
-          studentName: '',
-          description: ''
-        }));
+        const successMsg = `Sucesso! Ocorrência e PDF anexado enviados para ${formData.coordinationEmail}`;
+        showToast(successMsg, 'success');
+
+        if (result.previewUrl) {
+          console.log(`🔗 Link de pré-visualização do e-mail de teste: ${result.previewUrl}`);
+        }
+
+        // Limpa campos variáveis do aluno mantendo professor
+        handleResetStudentFields();
       } else {
-        showToast(result.message || 'Erro ao enviar e-mail da ocorrência, porém o PDF foi baixado com sucesso.', 'error');
+        showToast(result.message || 'Falha ao enviar e-mail. Verifique a conexão.', 'error');
       }
     } catch (err) {
       console.error(err);
-      showToast('Ocorreu uma falha durante o processo de envio por e-mail.', 'error');
+      showToast('Ocorreu uma falha durante o processo de envio.', 'error');
     } finally {
       setIsSendingEmail(false);
     }
@@ -217,13 +286,13 @@ export default function App() {
             <ShieldCheck size={24} color="#34d399" />
             <div>
               <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Gerador de Ocorrência Escolar PEI</span>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Geração instantânea de documento PDF oficial e envio para a coordenação por e-mail.
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                Envio direto para a coordenação (<strong style={{ color: '#34d399' }}>{formData.coordinationEmail}</strong>) com documento PDF oficial anexado.
               </p>
             </div>
           </div>
-          <div className="badge badge-info" style={{ padding: '6px 12px' }}>
-            <FileCheck size={14} /> PDF Oficial Formatado
+          <div className="badge badge-info" style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Mail size={14} /> Envio Automático Habilitado
           </div>
         </div>
 
@@ -231,11 +300,13 @@ export default function App() {
         <OccurrenceForm
           formData={formData}
           onChange={handleInputChange}
+          onResetStudentFields={handleResetStudentFields}
           onPreview={handlePreviewPdf}
           onDownload={handleDownloadPdf}
           onSendEmail={handleSendEmail}
           isGenerating={isGenerating}
           isSendingEmail={isSendingEmail}
+          isDraftSaved={isDraftSaved}
         />
       </main>
 

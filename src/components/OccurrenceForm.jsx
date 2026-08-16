@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { UserCheck, Users, Calendar, AlertTriangle, FileText, Eye, Download, PlusCircle, Sparkles, Mail, Send } from 'lucide-react';
+import { UserCheck, Users, Calendar, AlertTriangle, FileText, Eye, Download, PlusCircle, Sparkles, Mail, Send, RotateCcw, Check } from 'lucide-react';
 
 export default function OccurrenceForm({
   formData,
   onChange,
+  onResetStudentFields,
   onPreview,
   onDownload,
   onSendEmail,
   isGenerating,
-  isSendingEmail
+  isSendingEmail,
+  isDraftSaved
 }) {
   const [activeChip, setActiveChip] = useState('');
 
@@ -44,15 +46,45 @@ export default function OccurrenceForm({
   return (
     <form onSubmit={handleSubmit} className="glass-card animate-fade-in" style={{ padding: '32px', maxWidth: '850px', margin: '0 auto' }}>
       
-      {/* Título da Seção */}
-      <div style={{ marginBottom: '28px', borderBottom: '1px solid var(--card-border)', paddingBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-          <Sparkles size={24} color="#6366f1" />
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Novo Registro de Ocorrência Escolar</h2>
+      {/* Título da Seção e Status de Rascunho */}
+      <div style={{ marginBottom: '28px', borderBottom: '1px solid var(--card-border)', paddingBottom: '16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+            <Sparkles size={24} color="#6366f1" />
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Novo Registro de Ocorrência Escolar</h2>
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
+            Preencha os dados abaixo para gerar o PDF oficial e despachar a ocorrência diretamente para o e-mail da coordenação.
+          </p>
         </div>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          Preencha os campos abaixo para gerar o PDF oficial e enviar o registro diretamente para a coordenação.
-        </p>
+
+        {/* Indicador de Rascunho Salvo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {isDraftSaved && (
+            <span style={{ fontSize: '0.75rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(16, 185, 129, 0.1)', padding: '4px 10px', borderRadius: '12px' }}>
+              <Check size={12} /> Rascunho salvo
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={onResetStudentFields}
+            title="Limpar dados do aluno para registrar nova ocorrência mantendo o nome do professor"
+            style={{
+              fontSize: '0.75rem',
+              padding: '5px 10px',
+              borderRadius: '8px',
+              border: '1px solid var(--card-border)',
+              background: 'transparent',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}
+          >
+            <RotateCcw size={12} /> Limpar Aluno
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '24px' }}>
@@ -68,6 +100,7 @@ export default function OccurrenceForm({
             name="teacherName"
             type="text"
             required
+            maxLength={120}
             className="form-input"
             placeholder="Ex: Prof. Roberto Silva"
             value={formData.teacherName}
@@ -86,6 +119,7 @@ export default function OccurrenceForm({
             name="studentName"
             type="text"
             required
+            maxLength={120}
             className="form-input"
             placeholder="Ex: Gabriel Lucas Santos"
             value={formData.studentName}
@@ -141,6 +175,7 @@ export default function OccurrenceForm({
             name="dateTime"
             type="text"
             required
+            maxLength={60}
             className="form-input"
             placeholder="DD/MM/AAAA - HH:mm"
             value={formData.dateTime}
@@ -150,7 +185,7 @@ export default function OccurrenceForm({
 
       </div>
 
-      {/* Campo: E-mail da Coordenação e Categoria */}
+      {/* Campo: E-mail da Coordenação, Categoria e E-mail Opcional do Professor */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '24px' }}>
         
         {/* Campo: Categoria da Ocorrência */}
@@ -182,16 +217,35 @@ export default function OccurrenceForm({
         <div className="form-group">
           <label className="form-label" htmlFor="coordinationEmail">
             <Mail size={18} color="#10b981" />
-            E-mail da Coordenação / Destino <span style={{ color: '#ef4444' }}>*</span>
+            E-mail da Coordenação (Destinatário) <span style={{ color: '#ef4444' }}>*</span>
           </label>
           <input
             id="coordinationEmail"
             name="coordinationEmail"
             type="email"
             required
+            maxLength={100}
             className="form-input"
-            placeholder="Ex: arygomescoord2026@gmail.com ou coordenacao@escola.sp.gov.br"
+            placeholder="Ex: visovalu@gmail.com ou coordenacao@escola.sp.gov.br"
             value={formData.coordinationEmail}
+            onChange={onChange}
+          />
+        </div>
+
+        {/* Campo: E-mail do Professor (Opcional - para cópia CC) */}
+        <div className="form-group">
+          <label className="form-label" htmlFor="teacherEmail">
+            <Mail size={18} color="#6366f1" />
+            Seu E-mail (Opcional - para receber cópia)
+          </label>
+          <input
+            id="teacherEmail"
+            name="teacherEmail"
+            type="email"
+            maxLength={100}
+            className="form-input"
+            placeholder="Ex: professor@prof.educacao.sp.gov.br"
+            value={formData.teacherEmail || ''}
             onChange={onChange}
           />
         </div>
@@ -206,7 +260,7 @@ export default function OccurrenceForm({
             Descrição Detalhada do Ocorrido <span style={{ color: '#ef4444' }}>*</span>
           </label>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            {formData.description.length} caracteres
+            {formData.description.length} / 15.000 caracteres
           </span>
         </div>
 
@@ -214,6 +268,7 @@ export default function OccurrenceForm({
           id="description"
           name="description"
           required
+          maxLength={15000}
           rows={5}
           className="form-textarea"
           placeholder="Descreva de forma clara e objetiva a conduta do aluno que violou a regra da escola..."
@@ -273,11 +328,18 @@ export default function OccurrenceForm({
           type="button"
           onClick={onSendEmail}
           disabled={isGenerating || isSendingEmail}
-          className="btn btn-secondary"
-          style={{ padding: '14px 20px', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}
+          className="btn"
+          style={{
+            padding: '14px 22px',
+            background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+            color: '#ffffff',
+            fontWeight: 700,
+            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+            border: 'none'
+          }}
         >
-          <Send size={18} color="#34d399" />
-          {isSendingEmail ? 'Enviando e Baixando...' : 'Enviar por E-mail e Baixar PDF'}
+          <Send size={18} color="#ffffff" />
+          {isSendingEmail ? 'Enviando p/ Coordenação...' : 'Enviar por E-mail e Baixar PDF'}
         </button>
 
         <button

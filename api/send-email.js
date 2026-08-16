@@ -1,82 +1,5 @@
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
 import nodemailer from 'nodemailer';
 
-try {
-  if (typeof process.loadEnvFile === 'function') {
-    process.loadEnvFile();
-  }
-} catch (e) {
-  // Já carregado via dotenv
-}
-
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-// CORS restrito a origens permitidas
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'https://ocorrencias-escolares.vercel.app'
-];
-
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-      callback(null, true);
-    } else {
-      callback(new Error('Bloqueado pela política de CORS'));
-    }
-  },
-  methods: ['POST', 'GET', 'OPTIONS'],
-  credentials: false
-}));
-
-// Limite de payload seguro contra DoS (8MB para Base64 PDF)
-app.use(express.json({ limit: '8mb' }));
-
-// Rate limiting em memória (20 requisições por minuto por IP)
-const rateLimitMap = new Map();
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 20;
-
-function rateLimit(req, res, next) {
-  const ip = req.ip || req.connection.remoteAddress;
-  const now = Date.now();
-
-  if (!rateLimitMap.has(ip)) {
-    rateLimitMap.set(ip, []);
-  }
-
-  const timestamps = rateLimitMap.get(ip).filter(t => now - t < RATE_LIMIT_WINDOW_MS);
-  
-  if (timestamps.length >= RATE_LIMIT_MAX_REQUESTS) {
-    return res.status(429).json({
-      success: false,
-      message: 'Limite de envios atingido. Aguarde um minuto antes de tentar novamente.'
-    });
-  }
-
-  timestamps.push(now);
-  rateLimitMap.set(ip, timestamps);
-  next();
-}
-
-// Limpeza de cache a cada 5 minutos
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, timestamps] of rateLimitMap.entries()) {
-    const active = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW_MS);
-    if (active.length === 0) {
-      rateLimitMap.delete(ip);
-    } else {
-      rateLimitMap.set(ip, active);
-    }
-  }
-}, 5 * 60_000);
-
-// Sanitização contra XSS
 function escapeHtml(text) {
   if (typeof text !== 'string') return '';
   return text
@@ -87,92 +10,28 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
-// Sanitização contra CRLF Injection em cabeçalhos de e-mail
 function sanitizeHeader(text, maxLen = 120) {
   if (typeof text !== 'string') return '';
   return text.replace(/[\r\n\t]/g, ' ').trim().slice(0, maxLen);
 }
 
-// Transporter Nodemailer (Gmail / SMTP / Ethereal)
-let transporter;
-let senderAddress = process.env.SMTP_USER || 'visovalu@gmail.com';
-let isEthereal = false;
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
 
-async function initTransporter() {
-  const rawPass = process.env.SMTP_PASS || '';
-  const cleanPass = rawPass.replace(/\s+/g, '');
-
-  if (cleanPass) {
-    const user = process.env.SMTP_USER || 'visovalu@gmail.com';
-    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const isGmail = host.includes('gmail');
-
-    if (isGmail) {
-      transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: user,
-          pass: cleanPass
-        }
-      });
-    } else {
-      transporter = nodemailer.createTransport({
-        host: host,
-        port: Number(process.env.SMTP_PORT) || 465,
-        secure: process.env.SMTP_SECURE !== 'false',
-        auth: {
-          user: user,
-          pass: cleanPass
-        }
-      });
-    }
-
-    senderAddress = user;
-    console.log(`📡 Configurando envio de e-mail com a conta: ${senderAddress}`);
-
-    transporter.verify((error, success) => {
-      if (error) {
-        console.error('❌ Erro de autenticação SMTP com o Gmail:', error.message);
-      } else {
-        console.log('✅ Conexão SMTP com o Gmail autenticada com sucesso! Pronto para disparar e-mails.');
-      }
-    });
-  } else {
-    try {
-      console.warn('⚠️ SMTP_PASS não encontrada no .env. Inicializando conta de testes Ethereal...');
-      const testAccount = await nodemailer.createTestAccount();
-      transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass
-        }
-      });
-      senderAddress = testAccount.user;
-      isEthereal = true;
-      console.log('✅ Conta de teste Ethereal ativa.');
-    } catch (err) {
-      console.error('Erro ao inicializar conta de teste:', err.message);
-    }
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
-}
 
-initTransporter();
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, message: 'Método não permitido. Use POST.' });
+  }
 
-// Endpoint de Status / Health Check
-app.get('/api/status', (req, res) => {
-  res.json({
-    status: 'online',
-    sender: senderAddress,
-    isEthereal,
-    hasPassword: Boolean(process.env.SMTP_PASS)
-  });
-});
-
-// Endpoint de Envio de E-mail de Ocorrência Escolar
-app.post('/api/send-email', rateLimit, async (req, res) => {
   try {
     const {
       teacherName,
@@ -187,28 +46,94 @@ app.post('/api/send-email', rateLimit, async (req, res) => {
     } = req.body || {};
 
     if (!teacherName || !studentName || !grade || !description) {
-      return res.status(400).json({ success: false, message: 'Dados da ocorrência incompletos.' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Dados da ocorrência incompletos. Preencha todos os campos obrigatórios.' 
+      });
     }
 
-    // Validação de e-mail e formato
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const cleanCoordinationEmail = sanitizeHeader(coordinationEmail, 100);
     if (!emailRegex.test(cleanCoordinationEmail)) {
-      return res.status(400).json({ success: false, message: 'Endereço de e-mail da coordenação inválido.' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Endereço de e-mail da coordenação inválido.' 
+      });
     }
 
     const cleanTeacherEmail = teacherEmail ? sanitizeHeader(teacherEmail, 100) : '';
     if (cleanTeacherEmail && !emailRegex.test(cleanTeacherEmail)) {
-      return res.status(400).json({ success: false, message: 'Endereço de e-mail do professor inválido.' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Endereço de e-mail do professor inválido.' 
+      });
     }
 
-    // Sanitização e validação de tamanho de campos
+    // Sanitização contra CRLF e XSS
     const safeTeacherName = escapeHtml(sanitizeHeader(teacherName, 120));
     const safeStudentName = escapeHtml(sanitizeHeader(studentName, 120));
     const safeGrade = escapeHtml(sanitizeHeader(grade, 50));
     const safeOccurrenceType = escapeHtml(sanitizeHeader(occurrenceType, 120));
     const safeDateTime = escapeHtml(sanitizeHeader(dateTime, 60));
     const safeDescription = escapeHtml(typeof description === 'string' ? description.slice(0, 15000) : '');
+
+    let transporter;
+    let senderEmail = process.env.SMTP_USER || 'visovalu@gmail.com';
+    let isTestAccount = false;
+
+    const rawPass = process.env.SMTP_PASS || '';
+    const cleanPass = rawPass.replace(/\s+/g, '');
+
+    if (cleanPass) {
+      const user = process.env.SMTP_USER || 'visovalu@gmail.com';
+      const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+      const isGmail = host.includes('gmail');
+
+      if (isGmail) {
+        transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: user,
+            pass: cleanPass
+          }
+        });
+      } else {
+        transporter = nodemailer.createTransport({
+          host: host,
+          port: Number(process.env.SMTP_PORT) || 465,
+          secure: process.env.SMTP_SECURE !== 'false',
+          auth: {
+            user: user,
+            pass: cleanPass
+          }
+        });
+      }
+      senderEmail = user;
+    } else {
+      try {
+        const testAccount = await nodemailer.createTestAccount();
+        transporter = nodemailer.createTransport({
+          host: 'smtp.ethereal.email',
+          port: 587,
+          secure: false,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass
+          }
+        });
+        senderEmail = testAccount.user;
+        isTestAccount = true;
+      } catch (etherealErr) {
+        console.error('Erro ao gerar conta de teste Ethereal:', etherealErr);
+      }
+    }
+
+    if (!transporter) {
+      return res.status(500).json({
+        success: false,
+        message: 'Servidor de envio de e-mail não configurado. Adicione SMTP_PASS no ambiente.'
+      });
+    }
 
     const base64Data = pdfBase64 ? pdfBase64.replace(/^data:application\/pdf;base64,/, '') : null;
     const pdfBuffer = base64Data ? Buffer.from(base64Data, 'base64') : null;
@@ -217,7 +142,7 @@ app.post('/api/send-email', rateLimit, async (req, res) => {
     const attachmentFilename = `Ocorrencia_${sanitizedStudentFile}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
     const mailOptions = {
-      from: `"E.E. Coronel Ary Gomes - Ocorrências" <${senderAddress}>`,
+      from: `"E.E. Coronel Ary Gomes - Ocorrências" <${senderEmail}>`,
       to: cleanCoordinationEmail,
       cc: cleanTeacherEmail ? cleanTeacherEmail : undefined,
       subject: `🚨 [Ocorrência Escolar PEI] ${safeGrade} - ${safeStudentName}`,
@@ -284,37 +209,26 @@ app.post('/api/send-email', rateLimit, async (req, res) => {
       ] : []
     };
 
-    if (!transporter) {
-      return res.status(500).json({ success: false, message: 'Serviço de e-mail não inicializado.' });
-    }
-
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✉️ E-mail enviado para ${cleanCoordinationEmail}. ID: ${info.messageId}`);
-    
+    console.log(`✉️ E-mail enviado com sucesso para ${cleanCoordinationEmail}. ID: ${info.messageId}`);
+
     let previewUrl = null;
-    if (isEthereal) {
+    if (isTestAccount) {
       previewUrl = nodemailer.getTestMessageUrl(info);
-      if (previewUrl) {
-        console.log(`🔗 Link de pré-visualização Ethereal: ${previewUrl}`);
-      }
     }
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       message: `Ocorrência e documento PDF enviados com sucesso para a coordenação (${cleanCoordinationEmail})!`,
       messageId: info.messageId,
       previewUrl
     });
 
-  } catch (err) {
-    console.error('❌ Erro no envio do e-mail:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: `Erro ao enviar e-mail: ${err.message || 'Falha no servidor SMTP'}` 
+  } catch (error) {
+    console.error('Erro no envio de e-mail:', error);
+    return res.status(500).json({
+      success: false,
+      message: `Falha ao enviar e-mail: ${error.message || 'Erro interno no servidor de envio'}`
     });
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor de e-mails de ocorrência rodando na porta ${PORT}`);
-});
+}

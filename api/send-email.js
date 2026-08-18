@@ -141,7 +141,9 @@ export default async function handler(req, res) {
     }
     senderEmail = user;
 
-    const base64Data = pdfBase64 ? pdfBase64.replace(/^data:application\/pdf;base64,/, '') : null;
+    const base64Data = pdfBase64 
+      ? (pdfBase64.includes(',') ? pdfBase64.split(',')[1] : pdfBase64) 
+      : null;
     const pdfBuffer = base64Data ? Buffer.from(base64Data, 'base64') : null;
 
     const sanitizedStudentFile = studentName.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 50);

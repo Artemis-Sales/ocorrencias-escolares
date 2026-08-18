@@ -32,7 +32,7 @@ export default async function handler(req, res) {
   // Diagnóstico GET para verificar se a API está online na Vercel
   if (req.method === 'GET') {
     const hasSmtpPass = Boolean(process.env.SMTP_PASS);
-    const smtpUser = process.env.SMTP_USER || 'visovalu@gmail.com';
+    const smtpUser = process.env.SMTP_USER || 'arygomescoord2026@gmail.com';
     return res.status(200).json({
       status: 'API Vercel Online',
       smtpUser,
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
       occurrenceType,
       dateTime,
       description,
-      coordinationEmail = 'visovalu@gmail.com',
+      coordinationEmail = 'arygomescoord2026@gmail.com',
       teacherEmail = '',
       pdfBase64
     } = body;
@@ -104,7 +104,7 @@ export default async function handler(req, res) {
     const safeDescription = escapeHtml(typeof description === 'string' ? description.slice(0, 15000) : '');
 
     let transporter;
-    let senderEmail = process.env.SMTP_USER || 'visovalu@gmail.com';
+    let senderEmail = process.env.SMTP_USER || 'arygomescoord2026@gmail.com';
 
     const rawPass = process.env.SMTP_PASS || '';
     const cleanPass = rawPass.replace(/\s+/g, '');
@@ -116,7 +116,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const user = process.env.SMTP_USER || 'visovalu@gmail.com';
+    const user = process.env.SMTP_USER || 'arygomescoord2026@gmail.com';
     const host = process.env.SMTP_HOST || 'smtp.gmail.com';
     const isGmail = host.includes('gmail');
 

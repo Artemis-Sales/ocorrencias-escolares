@@ -21,7 +21,7 @@ Sistema web moderno e institucional desenvolvido para facilitar, padronizar e ag
 O sistema foi concebido para resolver os principais gargalos no processo tradicional de registro de ocorrências escolares (papel, arquivos manuais ou preenchimentos despadronizados):
 - **Padronização Visual e Jurídica**: Gera um documento PDF oficial de alta fidelidade com os cabeçalhos oficiais do Estado de SP, Diretoria de Ensino de Guarulhos Sul e logotipos institucionais.
 - **Economia de Tempo para o Professor**: Sugestões rápidas de motivos comuns de ocorrência, preenchimento automático de data/hora e salvamento do nome do professor no navegador.
-- **Comunicação Instantânea com a Coordenação**: Envio automático e direto da ocorrência para a caixa de entrada da coordenação (`visovalu@gmail.com`) com o documento PDF já anexado.
+- **Comunicação Instantânea com a Coordenação**: Envio automático e direto da ocorrência para a caixa de entrada da coordenação (`arygomescoord2026@gmail.com`) com o documento PDF já anexado.
 - **Histórico e Segurança**: O professor baixa uma cópia em PDF no seu computador no mesmo instante em que a mensagem é despachada.
 
 ---
@@ -156,7 +156,7 @@ Crie um arquivo `.env` na raiz do projeto baseado no `.env.example`:
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465
 SMTP_SECURE=true
-SMTP_USER=visovalu@gmail.com
+SMTP_USER=arygomescoord2026@gmail.com
 SMTP_PASS=sua_senha_de_aplicativo_de_16_digitos
 
 VITE_WEB3FORMS_KEY=89e47268-2943-4c91-9134-c2c61e404b86
@@ -181,7 +181,7 @@ O projeto está 100% preparado para deploy contínuo na Vercel:
 
 1. Importe o repositório na [Vercel](https://vercel.com).
 2. Em **Project Settings > Environment Variables**, cadastre as seguintes variáveis:
-   - `SMTP_USER`: `visovalu@gmail.com`
+   - `SMTP_USER`: `arygomescoord2026@gmail.com`
    - `SMTP_PASS`: sua senha de app de 16 dígitos
    - `SMTP_HOST`: `smtp.gmail.com`
    - `SMTP_PORT`: `465`

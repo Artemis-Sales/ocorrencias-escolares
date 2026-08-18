@@ -13,7 +13,7 @@ export const sendOccurrenceEmail = async (occurrenceData, pdfBase64) => {
     occurrenceType,
     dateTime,
     description,
-    coordinationEmail = 'visovalu@gmail.com',
+    coordinationEmail = 'arygomescoord2026@gmail.com',
     teacherEmail = ''
   } = occurrenceData;
 
@@ -24,12 +24,12 @@ export const sendOccurrenceEmail = async (occurrenceData, pdfBase64) => {
     occurrenceType,
     dateTime,
     description,
-    coordinationEmail: coordinationEmail || 'visovalu@gmail.com',
+    coordinationEmail: coordinationEmail || 'arygomescoord2026@gmail.com',
     teacherEmail,
     pdfBase64
   };
 
-  const targetEmail = coordinationEmail || 'visovalu@gmail.com';
+  const targetEmail = coordinationEmail || 'arygomescoord2026@gmail.com';
 
   // 1. Tenta envio via API Principal (/api/send-email)
   const endpoints = ['/api/send-email'];

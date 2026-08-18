@@ -95,7 +95,7 @@ function sanitizeHeader(text, maxLen = 120) {
 
 // Transporter Nodemailer (Gmail / SMTP / Ethereal)
 let transporter;
-let senderAddress = process.env.SMTP_USER || 'visovalu@gmail.com';
+let senderAddress = process.env.SMTP_USER || 'arygomescoord2026@gmail.com';
 let isEthereal = false;
 
 async function initTransporter() {
@@ -103,7 +103,7 @@ async function initTransporter() {
   const cleanPass = rawPass.replace(/\s+/g, '');
 
   if (cleanPass) {
-    const user = process.env.SMTP_USER || 'visovalu@gmail.com';
+    const user = process.env.SMTP_USER || 'arygomescoord2026@gmail.com';
     const host = process.env.SMTP_HOST || 'smtp.gmail.com';
     const isGmail = host.includes('gmail');
 
@@ -181,7 +181,7 @@ app.post('/api/send-email', rateLimit, async (req, res) => {
       occurrenceType,
       dateTime,
       description,
-      coordinationEmail = 'visovalu@gmail.com',
+      coordinationEmail = 'arygomescoord2026@gmail.com',
       teacherEmail = '',
       pdfBase64
     } = req.body || {};

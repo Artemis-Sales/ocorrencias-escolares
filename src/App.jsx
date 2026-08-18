@@ -41,7 +41,7 @@ export default function App() {
           occurrenceType: parsed.occurrenceType || '',
           dateTime: parsed.dateTime || '',
           description: parsed.description || '',
-          coordinationEmail: parsed.coordinationEmail || 'visovalu@gmail.com',
+          coordinationEmail: parsed.coordinationEmail || 'arygomescoord2026@gmail.com',
           teacherEmail: parsed.teacherEmail || ''
         };
       } catch (e) {
@@ -56,7 +56,7 @@ export default function App() {
       occurrenceType: '',
       dateTime: '',
       description: '',
-      coordinationEmail: 'visovalu@gmail.com',
+      coordinationEmail: 'arygomescoord2026@gmail.com',
       teacherEmail: ''
     };
   });

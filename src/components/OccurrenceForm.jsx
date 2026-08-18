@@ -226,7 +226,7 @@ export default function OccurrenceForm({
             required
             maxLength={100}
             className="form-input"
-            placeholder="Ex: visovalu@gmail.com ou coordenacao@escola.sp.gov.br"
+            placeholder="Ex: arygomescoord2026@gmail.com ou coordenacao@escola.sp.gov.br"
             value={formData.coordinationEmail}
             onChange={onChange}
           />

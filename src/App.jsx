@@ -41,7 +41,9 @@ export default function App() {
           occurrenceType: parsed.occurrenceType || '',
           dateTime: parsed.dateTime || '',
           description: parsed.description || '',
-          coordinationEmail: parsed.coordinationEmail || 'arygomescoord2026@gmail.com',
+          coordinationEmail: (!parsed.coordinationEmail || parsed.coordinationEmail === 'visovalu@gmail.com') 
+            ? 'arygomescoord2026@gmail.com' 
+            : parsed.coordinationEmail,
           teacherEmail: parsed.teacherEmail || ''
         };
       } catch (e) {
